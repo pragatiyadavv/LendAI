@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Card, Button, Input, Badge } from './common/UI';
-import { ApplicantForm, LoanApplication, Decision } from '../types';
+import { Card, Button, Input } from './common/UI';
+import { ApplicantForm, LoanApplication } from '../types';
 import { GeminiService } from '../services/geminiService';
 
 interface Props {
@@ -25,7 +25,6 @@ export const ApplicationFlow: React.FC<Props> = ({ onComplete }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setFiles(prev => {
-          // Replace existing file of same type if it exists
           const filtered = prev.filter(f => f.type !== type);
           return [...filtered, { type, name: file.name, content: reader.result as string }];
         });
@@ -60,7 +59,15 @@ export const ApplicationFlow: React.FC<Props> = ({ onComplete }) => {
       onComplete(application);
     } catch (err: any) {
       console.error(err);
-      alert(`Error processing application: ${err.message || "Unknown error"}. Please ensure you uploaded valid files (Images or PDFs).`);
+      let errorMessage = "Unknown error occurred.";
+      
+      if (err.message?.includes('429')) {
+        errorMessage = "API Quota Exceeded. Please try again in a few minutes or check your API billing status.";
+      } else {
+        errorMessage = err.message || "Unknown error";
+      }
+      
+      alert(`Error processing application: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -95,18 +102,16 @@ export const ApplicationFlow: React.FC<Props> = ({ onComplete }) => {
       {step === 2 && (
         <Card className="p-8">
           <h2 className="text-lg font-semibold mb-2">Required Documentation</h2>
-          <p className="text-sm text-slate-500 mb-6">Please upload clear copies of the following documents. Supported formats: <strong>JPG, PNG, PDF</strong>.</p>
+          <p className="text-sm text-slate-500 mb-6">Supported formats: JPG, PNG, PDF.</p>
           
           <div className="space-y-6">
             <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${hasDoc('ID') ? 'border-green-200 bg-green-50' : 'border-slate-200 hover:border-indigo-300'}`}>
               <p className="text-sm font-medium text-slate-700 mb-2">Government Issued ID (PAN/Aadhaar) {hasDoc('ID') && '✓'}</p>
               <input type="file" accept="image/*,.pdf" onChange={e => handleFileChange(e, 'ID')} className="text-sm cursor-pointer" />
-              {hasDoc('ID') && <p className="text-xs text-green-600 mt-2 font-medium">{files.find(f => f.type === 'ID')?.name}</p>}
             </div>
             <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${hasDoc('PAYSTUB') ? 'border-green-200 bg-green-50' : 'border-slate-200 hover:border-indigo-300'}`}>
               <p className="text-sm font-medium text-slate-700 mb-2">Salary Slip / ITR-V {hasDoc('PAYSTUB') && '✓'}</p>
               <input type="file" accept="image/*,.pdf" onChange={e => handleFileChange(e, 'PAYSTUB')} className="text-sm cursor-pointer" />
-              {hasDoc('PAYSTUB') && <p className="text-xs text-green-600 mt-2 font-medium">{files.find(f => f.type === 'PAYSTUB')?.name}</p>}
             </div>
           </div>
 
@@ -123,14 +128,12 @@ export const ApplicationFlow: React.FC<Props> = ({ onComplete }) => {
           <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm mb-6">
             <p><strong>Name:</strong> {form.fullName}</p>
             <p><strong>Amount:</strong> ₹{form.requestedAmount.toLocaleString('en-IN')}</p>
-            <p><strong>Documents:</strong> {files.length} attached ({files.map(f => f.name).join(', ')})</p>
           </div>
           
           {isProcessing ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p className="text-sm text-slate-600">AI extraction and validation in progress...</p>
-              <p className="text-xs text-slate-400 mt-2">Checking KYC, matching names, and processing documents (including multi-page PDFs).</p>
+              <p className="text-sm text-slate-600">AI extraction in progress...</p>
             </div>
           ) : (
             <div className="flex gap-4">
