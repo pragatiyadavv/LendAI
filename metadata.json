@@ -1,0 +1,7 @@
+{
+  "name": "LendAI Pro",
+  "description": "A production-grade, regulator-friendly AI system for processing loan applications with automated extraction, validation, and deterministic decisioning.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
